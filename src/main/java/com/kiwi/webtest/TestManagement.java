@@ -8,6 +8,7 @@ import org.openqa.selenium.interactions.Actions;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -15,23 +16,24 @@ import java.util.concurrent.TimeUnit;
 
 public class TestManagement {
     private WebDriver driver;
+    private Actions action;
     private Gson gson;
 
-    public TestManagement(WebDriver driver) {
+    public TestManagement(WebDriver driver) throws FileNotFoundException {
         this.driver = driver;
+        this.action = new Actions(this.driver);
         this.gson = new Gson();
 
         this.driver.manage().window().maximize();
+        driver.get("https://www.wjx.cn");
+        setCookies();
     }
 
-    private void login() throws FileNotFoundException, InterruptedException {
-        driver.get("https://www.wjx.cn");
+    private void setCookies() throws FileNotFoundException {
         CookieEntry[] cookieEntries = gson.fromJson(new FileReader("src/main/resources/cookies.json"), CookieEntry[].class);
         for (CookieEntry cookieEntry : cookieEntries) {
             driver.manage().addCookie(new Cookie(cookieEntry.getName(), cookieEntry.getValue()));
         }
-        driver.get("https://www.wjx.cn/newwjx/manage/myquestionnaires.aspx");
-        TimeUnit.SECONDS.sleep(1);
     }
 
     private boolean createQuestionnaire() {
@@ -59,6 +61,9 @@ public class TestManagement {
 
     private void publishQuestionnaire() throws InterruptedException {
         System.out.println("*********** Publish ***********");
+        driver.get("https://www.wjx.cn/newwjx/manage/myquestionnaires.aspx");
+        TimeUnit.SECONDS.sleep(1);
+
         clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_searchPapaer\"]/div/a", "进入选择界面");
         clickByXpath("//*[@id=\"divModule\"]/div[1]/a", "选择“调查”类型");
 
@@ -104,24 +109,78 @@ public class TestManagement {
         clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_btnSub\"]", "点击搜索按钮");
         showSearchResult(words, "在所有问卷中搜索：" + words);
 
-        Actions action = new Actions(driver);
         action.moveToElement(driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_divStatus\"]/div/div/span"))).perform();
         TimeUnit.SECONDS.sleep(1);
         action.click(driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_divStatus\"]/div/ul/li[3]"))).perform();
         showSearchResult(words, "在暂停状态的问卷中搜索：" + words);
     }
 
-    public void run() throws FileNotFoundException, InterruptedException {
-        login();
+    private void modifyQuestionnaire() throws InterruptedException {
+        System.out.println("*********** Modify ***********");
+        driver.get("https://www.wjx.cn/newwjx/manage/myquestionnaires.aspx");
+        TimeUnit.SECONDS.sleep(1);
 
+        if (!isElementExistByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_qls\"]/dl[1]/dd/div[1]/dl[1]/dd/a/i")) {
+            System.out.println("[exit] 没有可编辑的问卷");
+            return;
+        }
+
+        actionMoveByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_qls\"]/dl[1]/dd/div[1]/dl[1]/dd/a", "选中第一个问卷");
+        actionClickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_qls\"]/dl[1]/dd/div[1]/dl[1]/dd/ul/li[2]/a", "点击编辑按钮");
+        actionClickByXpath("//*[@id=\"layui-layer1\"]/div[3]/a[1]", "确认编辑");
+
+        actionClickByXpath("//*[@id=\"question\"]/div[2]", "编辑第一题");
+
+        driver.switchTo().frame(driver.findElement(By.xpath("//*[@id=\"question\"]/div[2]/div[2]/div/div[2]/div[2]/table/tbody/tr[2]/td/table/tbody/tr/td/iframe")));
+        WebElement textElement = driver.findElement(By.xpath("/html/body"));
+        while (!textElement.getText().equals("")) {
+            action.sendKeys(textElement, Keys.BACK_SPACE).perform();
+        }
+        action.sendKeys(textElement, "new title").perform();
+        driver.switchTo().defaultContent();
+
+        driver.findElement(By.xpath("//*[@id=\"question\"]/div[2]/div[2]/div/div[4]/div[2]/div/table/tbody/tr[2]/td[1]/input")).sendKeys("新的选项");
+        WebElement allowEdit = driver.findElement(By.xpath("//*[@id=\"question\"]/div[2]/div[2]/div/div[4]/div[2]/div/table/tbody/tr[2]/td[4]/span/input"));
+        if (!allowEdit.isSelected()) {
+            allowEdit.click();
+        }
+        clickByXpath("//*[@id=\"question\"]/div[2]/div[2]/div/div[6]/input", "完成编辑");
+
+        WebElement beginElement = driver.findElement(By.xpath("//*[@id=\"question\"]/div[2]/div/div[1]"));
+        WebElement endElement = driver.findElement(By.xpath("//*[@id=\"question\"]/div[3]"));
+        int dy = endElement.getRect().y - beginElement.getRect().y;
+        action.clickAndHold(beginElement)
+                .pause(1000)
+                .moveByOffset(0, dy)
+                .pause(1000)
+                .release()
+                .perform();
+        TimeUnit.SECONDS.sleep(2);
+        clickByXpath("//*[@id=\"hrefFiQ\"]", "保存编辑");
+    }
+
+    public void run() throws InterruptedException {
 //        publishQuestionnaire();
-        searchQuestionnaire("当代");
+//        searchQuestionnaire("当代");
+        modifyQuestionnaire();
     }
 
     private void clickByXpath(String xpath, String info) throws InterruptedException {
         System.out.println("[click] " + info);
         WebElement element = driver.findElement(By.xpath(xpath));
         element.click();
+        TimeUnit.SECONDS.sleep(1);
+    }
+
+    private void actionMoveByXpath(String xpath, String info) throws InterruptedException {
+        System.out.println("[move] " + info);
+        action.moveToElement(driver.findElement(By.xpath(xpath))).perform();
+        TimeUnit.SECONDS.sleep(1);
+    }
+
+    private void actionClickByXpath(String xpath, String info) throws InterruptedException {
+        System.out.println("[move] " + info);
+        action.click(driver.findElement(By.xpath(xpath))).perform();
         TimeUnit.SECONDS.sleep(1);
     }
 
