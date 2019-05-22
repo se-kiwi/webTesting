@@ -108,7 +108,8 @@ public class WebTesting {
     public void testUploadFile(){
         driver.switchTo().frame("uploadFrame3");
         WebElement fileUpload = driver.findElement(By.xpath("//*[@id=\"fileUpload\"]"));
-        String filePath = "C:\\Learning\\Software Testing\\WebTest\\SortCompare.png";
+        //must be absolute address
+        String filePath = "C:\\Learning\\Software Testing\\WebTest\\src\\main\\resources\\SortCompare.png";
         fileUpload.sendKeys(filePath);
 
         driver.switchTo().defaultContent();
