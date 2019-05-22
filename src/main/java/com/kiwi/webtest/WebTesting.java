@@ -12,6 +12,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.support.ui.Select;
 
+import java.io.File;
 import java.util.List;
 
 import static java.lang.Thread.sleep;
@@ -109,8 +110,8 @@ public class WebTesting {
         driver.switchTo().frame("uploadFrame3");
         WebElement fileUpload = driver.findElement(By.xpath("//*[@id=\"fileUpload\"]"));
         //must be absolute address
-        String filePath = "C:\\Learning\\Software Testing\\WebTest\\src\\main\\resources\\SortCompare.png";
-        fileUpload.sendKeys(filePath);
+        File file = new File("src/main/resources/SortCompare.png");
+        fileUpload.sendKeys(file.getAbsolutePath());
 
         driver.switchTo().defaultContent();
         WebElement uploadMsg = driver.findElement(By.className("uploadmsg"));
