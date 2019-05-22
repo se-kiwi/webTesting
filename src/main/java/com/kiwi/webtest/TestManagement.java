@@ -7,27 +7,30 @@ import org.openqa.selenium.chrome.ChromeDriver;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-public class TestCreation {
+public class TestManagement {
     private WebDriver driver;
     private Gson gson;
 
-    public TestCreation(WebDriver driver) {
+    public TestManagement(WebDriver driver) {
         this.driver = driver;
         this.gson = new Gson();
 
         this.driver.manage().window().maximize();
     }
 
-    private void login() throws FileNotFoundException {
+    private void login() throws FileNotFoundException, InterruptedException {
         driver.get("https://www.wjx.cn");
         CookieEntry[] cookieEntries = gson.fromJson(new FileReader("src/main/resources/cookies.json"), CookieEntry[].class);
         for (CookieEntry cookieEntry : cookieEntries) {
             driver.manage().addCookie(new Cookie(cookieEntry.getName(), cookieEntry.getValue()));
         }
         driver.get("https://www.wjx.cn/newwjx/manage/myquestionnaires.aspx");
+        TimeUnit.SECONDS.sleep(1);
     }
 
     private boolean createQuestionnaire() {
@@ -53,9 +56,8 @@ public class TestCreation {
         clickByXpath("//*[@id=\"divNormal\"]/li[5]/ul/li[2]/a", "添加NPS量表");
     }
 
-    public void run() throws FileNotFoundException, InterruptedException {
-        login();
-        TimeUnit.SECONDS.sleep(1);
+    private void publishQuestionnaire() throws InterruptedException {
+        System.out.println("*********** Publish ***********");
         clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_searchPapaer\"]/div/a", "进入选择界面");
         clickByXpath("//*[@id=\"divModule\"]/div[1]/a", "选择“调查”类型");
 
@@ -66,6 +68,43 @@ public class TestCreation {
             String questionnaireUrl = driver.findElement(By.xpath("//*[@id=\"ctl02_ContentPlaceHolder1_txtLink\"]")).getAttribute("value");
             System.out.println("[finish] 生成问卷： " + questionnaireUrl);
         }
+    }
+
+    private void searchQuestionnaire(String words) throws InterruptedException {
+        System.out.println("*********** Search ***********");
+        driver.get("https://www.wjx.cn/newwjx/manage/myquestionnaires.aspx");
+        TimeUnit.SECONDS.sleep(1);
+
+        WebElement searchInput = driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_txtName\"]"));
+        searchInput.sendKeys(words);
+        clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_btnSub\"]", "点击搜索按钮");
+
+        if (isElementExistByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_divEmptySearch\"]")) {
+            String tip = driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_lblNoQ\"]")).getText();
+            System.out.println(tip);
+            return;
+        }
+
+        WebElement searchResult = driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_qls\"]"));
+        List<WebElement> items = searchResult.findElements(By.className("survey-items"));
+        List<String> titles = new ArrayList<String>();
+        for (WebElement element : items) {
+            WebElement titleElement = element.findElement(By.className("item-top")).findElement(By.className("pull-left")).findElement(By.tagName("a"));
+            String title = titleElement.getAttribute("title");
+            assert title.contains(words);
+            titles.add(title);
+        }
+        System.out.println("搜索结果：" + titles.size());
+        for (String title : titles) {
+            System.out.println(title);
+        }
+    }
+
+    public void run() throws FileNotFoundException, InterruptedException {
+        login();
+
+//        publishQuestionnaire();
+        searchQuestionnaire("当代");
     }
 
     private void clickByXpath(String xpath, String info) throws InterruptedException {
@@ -85,7 +124,7 @@ public class TestCreation {
     }
 
     public static void main(String[] args) throws FileNotFoundException, InterruptedException {
-        TestCreation tc = new TestCreation(new ChromeDriver());
+        TestManagement tc = new TestManagement(new ChromeDriver());
         tc.run();
     }
 }
