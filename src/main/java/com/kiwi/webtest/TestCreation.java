@@ -7,7 +7,6 @@ import org.openqa.selenium.chrome.ChromeDriver;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -33,10 +32,11 @@ public class TestCreation {
 
     private boolean createQuestionnaire() {
         System.out.println("[enter] 进入创建问卷窗口");
-        if (false) {
+        if (isElementExistByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_antiSpam_txtValInputCode\"]")) {
             System.out.println("[exit] 无法识别验证码");
             return false;
         }
+
         WebElement inputName = driver.findElement(By.id("ctl01_ContentPlaceHolder1_txtQName"));
         inputName.sendKeys("当代大学生脱发情况调查" + (new Random()).nextInt(1000));
         driver.findElement(By.id("ctl01_ContentPlaceHolder1_lbtnNextStep")).click();
@@ -73,6 +73,15 @@ public class TestCreation {
         WebElement element = driver.findElement(By.xpath(xpath));
         element.click();
         TimeUnit.SECONDS.sleep(1);
+    }
+
+    private boolean isElementExistByXpath(String xpath) {
+        try {
+            driver.findElement(By.xpath(xpath));
+        } catch (NoSuchElementException e) {
+            return false;
+        }
+        return true;
     }
 
     public static void main(String[] args) throws FileNotFoundException, InterruptedException {
