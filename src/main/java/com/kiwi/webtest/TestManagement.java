@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.kiwi.webtest.cookies.CookieEntry;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.interactions.Actions;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -70,15 +71,8 @@ public class TestManagement {
         }
     }
 
-    private void searchQuestionnaire(String words) throws InterruptedException {
-        System.out.println("*********** Search ***********");
-        driver.get("https://www.wjx.cn/newwjx/manage/myquestionnaires.aspx");
-        TimeUnit.SECONDS.sleep(1);
-
-        WebElement searchInput = driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_txtName\"]"));
-        searchInput.sendKeys(words);
-        clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_btnSub\"]", "点击搜索按钮");
-
+    private void showSearchResult(String words, String info) {
+        System.out.println(info);
         if (isElementExistByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_divEmptySearch\"]")) {
             String tip = driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_lblNoQ\"]")).getText();
             System.out.println(tip);
@@ -98,6 +92,23 @@ public class TestManagement {
         for (String title : titles) {
             System.out.println(title);
         }
+    }
+
+    private void searchQuestionnaire(String words) throws InterruptedException {
+        System.out.println("*********** Search ***********");
+        driver.get("https://www.wjx.cn/newwjx/manage/myquestionnaires.aspx");
+        TimeUnit.SECONDS.sleep(1);
+
+        WebElement searchInput = driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_txtName\"]"));
+        searchInput.sendKeys(words);
+        clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_btnSub\"]", "点击搜索按钮");
+        showSearchResult(words, "在所有问卷中搜索：" + words);
+
+        Actions action = new Actions(driver);
+        action.moveToElement(driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_divStatus\"]/div/div/span"))).perform();
+        TimeUnit.SECONDS.sleep(1);
+        action.click(driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_divStatus\"]/div/ul/li[3]"))).perform();
+        showSearchResult(words, "在暂停状态的问卷中搜索：" + words);
     }
 
     public void run() throws FileNotFoundException, InterruptedException {
