@@ -10,6 +10,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.Select;
 
 import java.io.File;
@@ -168,5 +169,21 @@ public class WebTesting {
         } catch (NoSuchElementException e) {
             assertFalse(false);
         }
+    }
+
+    @Test
+    public  void  testSlider() throws InterruptedException {
+        WebElement slider1 = driver.findElement(By.xpath("//*[@id=\"divSlider4_0_bar\"]"));
+        WebElement sliderResult1 = driver.findElement(By.xpath("//*[@id=\"divSlider4_0_sp\"]"));
+        WebElement sliderResult2 = driver.findElement(By.xpath("//*[@id=\"divSlider4_1_sp\"]"));
+        Actions actions = new Actions(driver);
+        actions.clickAndHold(slider1).moveByOffset(50,0).release().perform();
+        sleep(500);
+
+        Integer dragnum1 = Integer.parseInt( sliderResult1.getText());
+        Integer dragnum2 = Integer.parseInt(sliderResult2.getText());
+
+        assertTrue(dragnum1 >0);
+        assertEquals(100, dragnum1 + dragnum2);
     }
 }
