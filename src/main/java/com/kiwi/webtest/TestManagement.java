@@ -2,16 +2,21 @@ package com.kiwi.webtest;
 
 import com.google.gson.Gson;
 import com.kiwi.webtest.cookies.CookieEntry;
+import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.interactions.Actions;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.time.Duration;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 public class TestManagement {
@@ -36,17 +41,64 @@ public class TestManagement {
         }
     }
 
-    private boolean createQuestionnaire() {
+    private void saveCaptcha(BufferedImage fullImg, Point point, Dimension size, double scale) throws IOException {
+        int x = (int) (point.getX() * scale);
+        int y = (int) (point.getY() * scale);
+        int w = (int) (size.getWidth() * scale);
+        int h = (int) (size.getHeight() * scale);
+        BufferedImage eleScreenshot= fullImg.getSubimage(x, y, w, h);
+        ImageIO.write(eleScreenshot, "png", new File("src/main/resources/captcha_" + scale + ".png"));
+    }
+
+    private void getScreenshot() throws IOException {
+        WebElement picElement = driver.findElement(By.xpath("//*[@id=\"spanCode\"]/span[2]/img"));
+
+        File screenshot = ((TakesScreenshot)driver).getScreenshotAs(OutputType.FILE);
+        BufferedImage fullImg = ImageIO.read(screenshot);
+
+        FileUtils.copyFile(screenshot, new File("src/main/resources/fullimg.png"));
+
+        Point point = picElement.getLocation();
+        Dimension size = picElement.getSize();
+        int eleWidth = picElement.getSize().getWidth();
+        int eleHeight = picElement.getSize().getHeight();
+
+        saveCaptcha(fullImg, point, size, 1.0);
+        saveCaptcha(fullImg, point, size, 1.25);
+        saveCaptcha(fullImg, point, size, 1.5);
+    }
+
+    private boolean createQuestionnaire() throws InterruptedException {
         System.out.println("[enter] 进入创建问卷窗口");
-        if (isElementExistByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_antiSpam_txtValInputCode\"]")) {
-            System.out.println("[exit] 无法识别验证码");
-            return false;
+        driver.findElement(By.id("ctl01_ContentPlaceHolder1_txtQName")).sendKeys("当代大学生脱发情况调查" + (new Random()).nextInt(1000));
+        clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_lbtnNextStep\"]", "点击创建按钮");
+
+        int testCount = 0;
+        while (isElementExistByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_antiSpam_txtValInputCode\"]")) {
+            testCount++;
+            System.out.println("验证码" + testCount);
+            if (testCount > 3) {
+                System.out.println("[exit] 失败多次，正在退出");
+                return false;
+            }
+
+            WebElement inputElement = driver.findElement(By.xpath("//*[@id=\"ctl01_ContentPlaceHolder1_antiSpam_txtValInputCode\"]"));
+            inputElement.click();
+
+            try {
+                getScreenshot();
+            } catch (IOException e) {
+                System.out.println("[exit] 捕获验证码失败");
+                return false;
+            }
+            Scanner scanner = new Scanner(System.in);
+            String strCaptcha = scanner.nextLine();
+            inputElement.click();
+            inputElement.sendKeys(strCaptcha);
+
+            clickByXpath("//*[@id=\"ctl01_ContentPlaceHolder1_lbtnNextStep\"]", "点击创建按钮");
         }
 
-        WebElement inputName = driver.findElement(By.id("ctl01_ContentPlaceHolder1_txtQName"));
-        inputName.sendKeys("当代大学生脱发情况调查" + (new Random()).nextInt(1000));
-        driver.findElement(By.id("ctl01_ContentPlaceHolder1_lbtnNextStep")).click();
-        System.out.println("[click] 点击创建按钮");
         return true;
     }
 
@@ -71,6 +123,11 @@ public class TestManagement {
             editQuestionnaire();
             clickByXpath("//*[@id=\"hrefFiQ\"]", "完成编辑");
             clickByXpath("//*[@id=\"ctl02_ContentPlaceHolder1_btnRun\"]", "发布问卷");
+
+            if (isElementExistByXpath("//*[@id=\"layui-layer-iframe1\"]")) {
+                System.out.println("[exit] 发布次数过多，需要绑定微信继续");
+                return;
+            }
             String questionnaireUrl = driver.findElement(By.xpath("//*[@id=\"ctl02_ContentPlaceHolder1_txtLink\"]")).getAttribute("value");
             System.out.println("[finish] 生成问卷： " + questionnaireUrl);
         }
@@ -160,9 +217,9 @@ public class TestManagement {
     }
 
     public void run() throws InterruptedException {
-//        publishQuestionnaire();
+        publishQuestionnaire();
 //        searchQuestionnaire("当代");
-        modifyQuestionnaire();
+//        modifyQuestionnaire();
     }
 
     private void clickByXpath(String xpath, String info) throws InterruptedException {
