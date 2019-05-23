@@ -218,8 +218,8 @@ public class TestManagement {
 
     public void run() throws InterruptedException {
         publishQuestionnaire();
-//        searchQuestionnaire("当代");
-//        modifyQuestionnaire();
+        searchQuestionnaire("当代");
+        modifyQuestionnaire();
     }
 
     private void clickByXpath(String xpath, String info) throws InterruptedException {
